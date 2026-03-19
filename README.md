@@ -160,11 +160,14 @@ npm install
 修改 `pages.json` 后若无法跳转：**停止运行并重新运行**（或清理 `unpackage/` 后再运行）。
 
 ### 命令行
-
 | 平台 | 开发 | 打包 |
 |------|------|------|
-| H5 | `npm run dev:h5` | `npm run build:h5` |
-| 微信小程序 | `npm run dev:mp-weixin` | `npm run build:mp-weixin` |
+| H5 | `cli launch web` | `cli publish --platform h5` |
+| 微信小程序 | `cli launch mp-weixin` | `cli publish --platform mp-weixin` |
+
+uni-app-x 的 H5 构建在 HBuilderX/XBuilder 和 命令行 上可能走不同流程。官方文档主要描述在 HBuilderX 中“发行”，命令行 vite build 或 uni build 可能未完全覆盖 uni-app-x 的 H5 构建逻辑。
+- 生产环境打包：优先使用 XBuilder / HBuilderX 的“发行 → 网站-H5 手机版”进行打包，以保证产物完整。
+- 本地验证：用 npx serve dist 或类似工具启动当前 dist，确认页面是否白屏，以验证构建是否可用。
 
 ### 为什么有 `postinstall`
 

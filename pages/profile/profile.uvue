@@ -65,7 +65,7 @@
 	import { logout, clearToken, isLoggedIn } from '../../src/api/auth.uts'
 	import { ROUTES } from '../../src/constants/route.uts'
 	import { resolveHttpError } from '../../src/core/http.uts'
-	import { openLoginModal, loginModalVisible, loginTarget } from '../../src/core/auth-modal.uts'
+	import { openLoginModal, loginModalVisible, loginTarget, clearLoginForm } from '../../src/core/auth-modal.uts'
 	import { USE_MOCK } from '../../src/core/config.uts'
 	import { bootstrapProfile } from '../../src/core/mock-bootstrap.uts'
 
@@ -114,11 +114,13 @@
 		logout()
 			.then(() => {
 				clearToken()
+				clearLoginForm()
 				uni.showToast({ title: '已退出登录', icon: 'none' })
 				goToNewsPage()
 			})
 			.catch((e) => {
 				clearToken()
+				clearLoginForm()
 				uni.showToast({ title: resolveHttpError(e), icon: 'none' })
 				goToNewsPage()
 			})

@@ -26,18 +26,23 @@ export default {
 	},
 	// #ifdef H5
 	onError(err : any) {
+		const msg = String(err?.message ?? err ?? '')
+		// uni-h5 切换 tab 时对已销毁实例调用 $triggerParentHide 导致，可忽略
+		if (msg.includes('$triggerParentHide')) return
 		console.error('App Error', err)
 		uni.showModal({
 			title: '运行时错误（开发）',
-			content: String(err ?? ''),
+			content: msg,
 			showCancel: false,
 		})
 	},
 	onUnhandledRejection(err : any) {
+		const msg = String(err?.message ?? err?.reason ?? err ?? '')
+		if (msg.includes('$triggerParentHide')) return
 		console.error('Unhandled Rejection', err)
 		uni.showModal({
 			title: 'Promise 错误（开发）',
-			content: String(err ?? ''),
+			content: msg,
 			showCancel: false,
 		})
 	},

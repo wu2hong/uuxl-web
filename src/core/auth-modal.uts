@@ -15,3 +15,9 @@ export function closeLoginModal() {
 	loginModalVisible.value = false
 	loginTarget.value = ''
 }
+
+/** 退出登录后调用，通知 LoginModal 清空表单 */
+export const loginFormClearTrigger = ref(0)
+export function clearLoginForm() {
+	loginFormClearTrigger.value++
+}

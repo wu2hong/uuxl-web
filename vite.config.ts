@@ -24,19 +24,28 @@ export default defineConfig({
 				const script = `
 <script>
 (() => {
-  const hit = (x) => String(x?.message ?? x?.reason?.message ?? x?.errMsg ?? x ?? '').includes('hideLoading:fail cancel');
+  const noise = (x) => {
+    const s = String(x?.message ?? x?.reason?.message ?? x?.errMsg ?? x ?? '');
+    return s.includes('hideLoading:fail cancel') || s.includes('$triggerParentHide');
+  };
   window.addEventListener('error', (e) => {
-    if (hit(e?.error ?? e?.message)) {
+    if (noise(e?.error ?? e?.message)) {
       e.preventDefault?.();
       e.stopImmediatePropagation?.();
+      return;
     }
   }, true);
+  const prevOnError = window.onerror;
+  window.onerror = (msg, src, line, col, err) => {
+    if (noise(err ?? msg)) return true;
+    return prevOnError ? prevOnError(msg, src, line, col, err) : false;
+  };
   window.addEventListener('unhandledrejection', (e) => {
-    if (hit(e?.reason)) e.preventDefault?.();
+    if (noise(e?.reason)) e.preventDefault?.();
   });
   const raw = console.error;
   console.error = (...args) => {
-    if (args.some((a) => hit(a))) return;
+    if (args.some((a) => noise(a))) return;
     raw(...args);
   };
 })();

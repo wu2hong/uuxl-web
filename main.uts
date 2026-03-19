@@ -3,6 +3,16 @@ import App from './App.uvue'
 import { createSSRApp } from './src/shims/vue'
 export function createApp() {
 	const app = createSSRApp(App)
+	// uni-h5 切换 tab 时可能对已销毁实例调用 $triggerParentHide，补全空实现避免报错
+	;(app.config as any).globalProperties.$triggerParentHide = () => {}
+	app.mixin({
+		beforeCreate() {
+			const inst = this as any
+			if (inst && typeof inst.$triggerParentHide === 'undefined') {
+				inst.$triggerParentHide = () => {}
+			}
+		},
+	})
 	return {
 		app
 	}

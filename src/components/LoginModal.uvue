@@ -26,10 +26,16 @@
 </template>
 
 <script setup lang="uts">
+	import { ref, watch } from 'vue'
 	import { login, setToken } from '../api/auth.uts'
-	import { closeLoginModal } from '../core/auth-modal.uts'
+	import { closeLoginModal, loginFormClearTrigger } from '../core/auth-modal.uts'
 	import { resolveHttpError } from '../core/http.uts'
 	import { ROUTES } from '../constants/route.uts'
+
+	watch(loginFormClearTrigger, () => {
+		username.value = ''
+		password.value = ''
+	})
 
 	const props = defineProps({
 		visible: { type: Boolean, default: false },
