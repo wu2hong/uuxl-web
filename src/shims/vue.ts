@@ -8,8 +8,8 @@ import * as VueRuntime from 'vue/dist/vue.runtime.esm-bundler.js'
 
 export * from 'vue/dist/vue.runtime.esm-bundler.js'
 
-// Vue 运行时默认导出（兼容少数场景）
-export default (VueRuntime as any).default ?? VueRuntime
+// Vue 运行时默认导出（兼容少数场景；Vue 3 无 default，直接透传 namespace）
+export default VueRuntime
 
 // uni-app/uni-h5 兼容：部分入口会使用 createVueApp
 export function createVueApp(...args: any[]) {
