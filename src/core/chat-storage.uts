@@ -1,0 +1,50 @@
+/**
+ * 聊天会话持久化：版本号 + 迁移 + 最大条数限制
+ * 未来字段变更时通过 migrate 兼容旧数据，避免丢失
+ */
+import { STORAGE_KEYS } from '../constants/storage.uts'
+import { getObject, setObject } from './storage.uts'
+
+export const CHAT_STORAGE_VERSION = 1
+export const MAX_CHAT_MESSAGES = 500
+
+export type ChatMessageRecord = {
+	localId: string
+	role: 'user' | 'assistant'
+	type: 'text' | 'image'
+	content?: string
+	imageUrl?: string
+	status: 'sending' | 'sent' | 'failed'
+	time: number
+}
+
+type ChatStoragePayload = {
+	version: number
+	messages: ChatMessageRecord[]
+}
+
+function migrate(raw: any): ChatMessageRecord[] {
+	if (!raw) return []
+	if (Array.isArray(raw)) {
+		return raw.filter((m) => m && typeof m.localId === 'string').slice(-MAX_CHAT_MESSAGES)
+	}
+	if (typeof raw === 'object' && Array.isArray(raw.messages)) {
+		return raw.messages.filter((m: any) => m && typeof m.localId === 'string').slice(-MAX_CHAT_MESSAGES)
+	}
+	return []
+}
+
+export function loadChatMessages(fallback: ChatMessageRecord[]): ChatMessageRecord[] {
+	const raw = getObject<any>(STORAGE_KEYS.chatMessages, null)
+	if (raw == null) return fallback
+	const migrated = migrate(raw)
+	return migrated.length > 0 ? migrated : fallback
+}
+
+export function saveChatMessages(messages: ChatMessageRecord[]): void {
+	const trimmed = messages.length > MAX_CHAT_MESSAGES ? messages.slice(-MAX_CHAT_MESSAGES) : messages
+	setObject(STORAGE_KEYS.chatMessages, {
+		version: CHAT_STORAGE_VERSION,
+		messages: trimmed,
+	} as ChatStoragePayload)
+}

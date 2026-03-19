@@ -1,0 +1,87 @@
+// 公共样式：统一页面背景、卡片与底部导航占位
+
+// 统一布局与间距 token
+$layout-page-padding: 24rpx;
+$layout-page-bottom-safe: 170rpx;
+$layout-card-padding: 24rpx;
+$layout-card-gap: 16rpx;
+$layout-section-gap: 24rpx;
+
+// 统一文案 token
+$text-page-title-size: 34rpx;
+$text-page-title-weight: 800;
+$nav-title-size: 34rpx;
+$nav-title-weight: 600;
+$text-sub-size: 26rpx;
+$text-sub-color: $uni-text-color-grey;
+$text-on-brand: #fff;
+
+// 统一图片/头像 token
+$image-cover-radius: $uni-border-radius-base;
+$avatar-size: 120rpx;
+
+// 统一品牌色语义 token
+$color-brand-soft-bg: rgba(47, 128, 237, 0.08);
+$color-brand-soft-border: rgba(47, 128, 237, 0.25);
+$color-brand-outline: rgba(47, 128, 237, 0.35);
+$color-brand-light-bg: rgba(47, 128, 237, 0.06);
+$color-brand-indicator: rgba(47, 128, 237, 0.35);
+
+// 底部导航 token
+$bottom-nav-height: 112rpx;
+$bottom-nav-icon-size: 34rpx;
+$bottom-nav-text-size: 26rpx;
+$bottom-nav-indicator-height: 6rpx;
+$bottom-nav-indicator-inset: 28rpx;
+$bottom-nav-indicator-bottom: 10rpx;
+$bottom-nav-bg: #fff;
+
+// 聊天输入区 token
+$chat-composer-height: 260rpx;
+$chat-composer-content-height: 208rpx; // 输入框+间距+按钮行实际高度，用于消息区底部留白
+$chat-composer-padding: 16rpx;
+$chat-composer-gap: 12rpx;
+$chat-input-height: 96rpx;
+
+// 聊天页底部操作按钮 token（统一维护，避免样式漂移）
+$chat-action-btn-height: 72rpx;
+$chat-action-btn-font-size: 26rpx;
+$chat-action-btn-radius: 12rpx;
+$chat-action-btn-width: 180rpx;
+$chat-action-btn-padding-x: 28rpx;
+
+.page-wrap {
+	min-height: 100vh;
+	background: $uni-bg-color;
+}
+
+.page-content {
+	padding: $layout-page-padding;
+	padding-bottom: $layout-page-bottom-safe; // 给底部导航 + 安全区留出空间
+}
+
+.card {
+	background: $uni-bg-color-grey;
+	border-radius: $uni-border-radius-base;
+	border: 1px solid $uni-border-color;
+	box-shadow: 0 1px 8px rgba(15, 23, 42, 0.03);
+	padding: $layout-card-padding;
+}
+
+.card-title {
+	font-size: $text-page-title-size;
+	font-weight: $text-page-title-weight;
+	color: $uni-color-title;
+}
+
+.row-between {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.text-subtle {
+	font-size: $text-sub-size;
+	color: $text-sub-color;
+}
+

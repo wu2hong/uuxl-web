@@ -1,0 +1,30 @@
+export const bootstrapNewsList = [
+	{
+		id: 'mock_bootstrap_1',
+		title: '心理小贴士（启动兜底）',
+		summary: '当前为 Mock 模式，页面已进入本地数据。',
+		cover: '/static/logo.png',
+	},
+]
+
+export const bootstrapChatMessages = [
+	{
+		localId: 'mock_bootstrap_chat_1',
+		role: 'assistant',
+		type: 'text',
+		content: '当前为 Mock 模式，你可以直接发送文字或图片体验聊天流程。',
+		status: 'sent',
+		time: 0,
+	},
+]
+
+export const bootstrapProfile = {
+	name: '游客用户（启动兜底）',
+	desc: '当前为 Mock 模式，页面已进入本地数据。',
+	phone: '—',
+	email: 'demo@uuxl.cn',
+	region: '中国',
+	status: '未登录（Mock）',
+	avatar: '/static/logo.png',
+}
+

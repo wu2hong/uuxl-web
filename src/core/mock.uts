@@ -1,0 +1,93 @@
+export function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		setTimeout(() => resolve(), ms)
+	})
+}
+
+type NewsItem = {
+	id: string
+	title: string
+	summary: string
+	cover?: string
+}
+
+// 正式项目避免依赖外部图片域名，Mock 也使用本地资源
+const covers = ['/static/logo.png']
+
+export async function mockNewsList(page: number, pageSize: number): Promise<any> {
+	await sleep(450)
+	const total = 27
+	const start = (page - 1) * pageSize
+	const end = Math.min(start + pageSize, total)
+	const list: NewsItem[] = []
+
+	for (let i = start; i < end; i++) {
+		list.push({
+			id: 'news_' + (i + 1),
+			title: `心理小贴士 #${i + 1}`,
+			summary: '这是用于页面体验的模拟资讯内容。后端接口就绪后，将自动切换为真实数据。',
+			cover: covers[i % covers.length],
+		})
+	}
+
+	return {
+		code: 0,
+		data: { list, page, pageSize, total },
+	}
+}
+
+export async function mockChatReplyText(input: string): Promise<any> {
+	await sleep(650)
+	return {
+		code: 0,
+		data: {
+			reply: `已收到：${input}\n\n（Mock 回复）建议你先描述感受与事件经过，我会一步步陪你梳理。`,
+		},
+	}
+}
+
+export async function mockChatReplyImage(): Promise<any> {
+	await sleep(800)
+	return {
+		code: 0,
+		data: {
+			reply: '图片已收到（Mock），我看到了。你希望我帮你分析哪部分？',
+		},
+	}
+}
+
+export async function mockLogin(username: string, password: string): Promise<any> {
+	await sleep(500)
+	if (!username || !password) {
+		return { code: 400, message: '用户名和密码不能为空' }
+	}
+	return {
+		code: 0,
+		data: {
+			token: 'mock_token_' + Date.now(),
+			user: { name: username, id: 'mock_user_1' },
+		},
+	}
+}
+
+export async function mockLogout(): Promise<any> {
+	await sleep(300)
+	return { code: 0, message: '退出成功' }
+}
+
+export async function mockProfile(): Promise<any> {
+	await sleep(380)
+	return {
+		code: 0,
+		data: {
+			name: '游客用户',
+			desc: '这是用于页面体验的模拟个人信息。后端接口就绪后将展示真实数据。',
+			phone: '—',
+			email: 'demo@uuxl.cn',
+			region: '中国',
+			status: '未登录（Mock）',
+			avatar: '/static/logo.png',
+		},
+	}
+}
+

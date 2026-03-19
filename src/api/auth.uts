@@ -1,0 +1,35 @@
+import { endpointOf, USE_MOCK } from '../core/config.uts'
+import { request } from '../core/http.uts'
+import { mockLogin, mockLogout } from '../core/mock.uts'
+import { STORAGE_KEYS } from '../constants/storage.uts'
+
+export function login(username: string, password: string): Promise<any> {
+	if (USE_MOCK) return mockLogin(username, password)
+	return request({
+		url: endpointOf('login'),
+		method: 'POST',
+		data: { username, password },
+	})
+}
+
+export function logout(): Promise<any> {
+	if (USE_MOCK) return mockLogout()
+	return request({
+		url: endpointOf('logout'),
+		method: 'POST',
+		data: {},
+	})
+}
+
+export function isLoggedIn(): boolean {
+	const token = uni.getStorageSync(STORAGE_KEYS.token)
+	return !!token
+}
+
+export function setToken(token: string): void {
+	uni.setStorageSync(STORAGE_KEYS.token, token)
+}
+
+export function clearToken(): void {
+	uni.removeStorageSync(STORAGE_KEYS.token)
+}

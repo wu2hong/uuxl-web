@@ -1,0 +1,103 @@
+<template>
+	<view v-if="visible" class="confirm-mask" @click="onCancel">
+		<view class="confirm-box" @click.stop>
+			<text class="confirm-title">{{ title }}</text>
+			<text class="confirm-content">{{ content }}</text>
+			<view class="confirm-actions">
+				<view class="confirm-btn cancel" @click="onCancel">
+					<text>取消</text>
+				</view>
+				<view class="confirm-btn ok" @click="onConfirm">
+					<text>确定</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	const props = defineProps({
+		visible: { type: Boolean, default: false },
+		title: { type: String, default: '提示' },
+		content: { type: String, default: '' },
+	})
+	const emit = defineEmits(['confirm', 'cancel'])
+
+	function onCancel() {
+		emit('cancel')
+	}
+
+	function onConfirm() {
+		emit('confirm')
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import '../styles/common.scss';
+
+	.confirm-mask {
+		position: fixed;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1001;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 48rpx;
+	}
+
+	.confirm-box {
+		width: 100%;
+		max-width: 560rpx;
+		background: #fff;
+		border-radius: $uni-border-radius-base;
+		padding: 32rpx 24rpx;
+		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+	}
+
+	.confirm-title {
+		display: block;
+		font-size: $text-page-title-size;
+		font-weight: $text-page-title-weight;
+		color: $uni-color-title;
+		margin-bottom: 16rpx;
+	}
+
+	.confirm-content {
+		display: block;
+		font-size: $uni-font-size-base;
+		color: $uni-text-color;
+		line-height: 1.5;
+		margin-bottom: 32rpx;
+	}
+
+	.confirm-actions {
+		display: flex;
+		flex-direction: row;
+		justify-content: flex-end;
+		gap: 24rpx;
+	}
+
+	.confirm-btn {
+		padding: 0 32rpx;
+		height: 72rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: $uni-font-size-base;
+		border-radius: $uni-border-radius-base;
+	}
+
+	.confirm-btn.cancel {
+		background: $uni-bg-color-grey;
+		color: $uni-text-color;
+	}
+
+	.confirm-btn.ok {
+		background: $uni-color-primary;
+		color: $text-on-brand;
+	}
+</style>

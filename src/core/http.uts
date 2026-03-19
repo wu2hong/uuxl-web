@@ -1,0 +1,129 @@
+import { BASE_URL } from './config.uts'
+import { STORAGE_KEYS } from '../constants/storage.uts'
+
+type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD'
+
+type RequestOptions = {
+	url: string
+	method?: RequestMethod
+	data?: any
+	header?: any
+	timeout?: number
+}
+
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = 1000
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function joinUrl(base: string, path: string): string {
+	if (!path) return base
+	if (base.endsWith('/') && path.startsWith('/')) return base + path.slice(1)
+	if (!base.endsWith('/') && !path.startsWith('/')) return base + '/' + path
+	return base + path
+}
+
+function buildAuthHeader(header?: any): any {
+	const token = uni.getStorageSync(STORAGE_KEYS.token)
+	return {
+		...(header ?? {}),
+		...(token ? { Authorization: token } : {}),
+	}
+}
+
+/** 是否可重试（网络/超时/5xx） */
+function isRetryable(err: any): boolean {
+	const msg = String(err?.errMsg ?? err?.message ?? '').toLowerCase()
+	if (msg.includes('timeout') || msg.includes('network') || msg.includes('fail') || msg.includes('abort')) return true
+	const code = err?.statusCode ?? err?.data?.code
+	if (code != null && code >= 500 && code < 600) return true
+	return false
+}
+
+/** 将错误映射为可展示给用户的文案 */
+export function resolveHttpError(err: any): string {
+	const code = err?.statusCode ?? err?.data?.code
+	if (code === 401) return '未登录或登录已过期'
+	if (code === 403) return '无权限'
+	if (code === 404) return '请求的资源不存在'
+	if (code != null && code >= 500 && code < 600) return '服务器繁忙，请稍后再试'
+	const msg = String(err?.errMsg ?? err?.message ?? '')
+	if (msg.includes('timeout') || msg.includes('超时')) return '网络超时，请检查网络'
+	if (msg.includes('network') || msg.includes('fail')) return '网络异常，请检查网络'
+	return '请求失败，请稍后再试'
+}
+
+function doRequest(options: RequestOptions): Promise<any> {
+	const mergedHeader = buildAuthHeader(options.header)
+	return new Promise((resolve, reject) => {
+		uni.request({
+			url: joinUrl(BASE_URL, options.url),
+			method: options.method ?? 'GET',
+			data: options.data ?? {},
+			header: mergedHeader,
+			timeout: options.timeout ?? 15000,
+			success: (res) => {
+				const code = res.statusCode ?? 0
+				if (code >= 400) {
+					reject({ statusCode: code, data: res.data, errMsg: 'HTTP ' + code })
+				} else {
+					resolve(res.data)
+				}
+			},
+			fail: (err) => reject(err),
+		})
+	})
+}
+
+function execWithRetry<T>(fn: () => Promise<T>, attempt: number): Promise<T> {
+	return fn().catch((e) => {
+		if (attempt < MAX_RETRIES && isRetryable(e)) {
+			return sleep(RETRY_DELAY_MS * (attempt + 1)).then(() => execWithRetry(fn, attempt + 1))
+		}
+		throw e
+	})
+}
+
+export function request(options: RequestOptions): Promise<any> {
+	return execWithRetry(() => doRequest(options), 0)
+}
+
+type UploadOptions = {
+	url: string
+	filePath: string
+	name?: string
+	formData?: any
+	header?: any
+}
+
+function doUploadFile(options: UploadOptions): Promise<any> {
+	const mergedHeader = buildAuthHeader(options.header)
+	return new Promise((resolve, reject) => {
+		uni.uploadFile({
+			url: joinUrl(BASE_URL, options.url),
+			filePath: options.filePath,
+			name: options.name ?? 'file',
+			formData: options.formData ?? {},
+			header: mergedHeader,
+			success: (res) => {
+				const code = res.statusCode ?? 0
+				if (code >= 400) {
+					reject({ statusCode: code, data: res.data, errMsg: 'HTTP ' + code })
+				} else {
+					try {
+						resolve(JSON.parse(res.data))
+					} catch (e) {
+						resolve(res.data)
+					}
+				}
+			},
+			fail: (err) => reject(err),
+		})
+	})
+}
+
+export function uploadFile(options: UploadOptions): Promise<any> {
+	return execWithRetry(() => doUploadFile(options), 0)
+}

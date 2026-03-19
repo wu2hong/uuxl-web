@@ -1,0 +1,226 @@
+<template>
+	<view class="page-wrap">
+		<PageHeader title="个人信息" />
+		<view class="page-content">
+			<view class="profile-head card">
+				<image
+					class="avatar"
+					:src="profile.avatar || '/static/logo.png'"
+					mode="aspectFill"
+				></image>
+				<view class="profile-meta">
+					<text class="profile-name">{{ profile.name || profile.nickname || '未获取到信息' }}</text>
+					<text class="profile-desc">{{ profile.desc || profile.bio || '—' }}</text>
+				</view>
+			</view>
+
+			<view class="info-grid">
+				<view class="info-item card">
+					<text class="info-label">手机号</text>
+					<text class="info-value">{{ profile.phone || '—' }}</text>
+				</view>
+				<view class="info-item card">
+					<text class="info-label">邮箱</text>
+					<text class="info-value">{{ profile.email || '—' }}</text>
+				</view>
+				<view class="info-item card">
+					<text class="info-label">地区</text>
+					<text class="info-value">{{ profile.region || '—' }}</text>
+				</view>
+				<view class="info-item card">
+					<text class="info-label">状态</text>
+					<text class="info-value">{{ profile.status || '—' }}</text>
+				</view>
+			</view>
+
+			<view v-if="loading" class="loading">
+				<text>加载中...</text>
+			</view>
+
+			<view class="logout-wrap">
+				<view class="logout-btn" @click="showLogoutConfirm">
+					<text>退出登录</text>
+				</view>
+			</view>
+		</view>
+
+		<BottomNav active="profile" />
+		<LoginModal :visible="loginModalVisible" :target="loginTarget" />
+		<ConfirmModal
+			:visible="logoutConfirmVisible"
+			title="确认退出"
+			content="确定要退出登录吗？"
+			@confirm="doLogout"
+			@cancel="hideLogoutConfirm"
+		/>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import BottomNav from '../../src/components/BottomNav.uvue'
+	import PageHeader from '../../src/components/PageHeader.uvue'
+	import LoginModal from '../../src/components/LoginModal.uvue'
+	import ConfirmModal from '../../src/components/ConfirmModal.uvue'
+	import { fetchProfile } from '../../src/api/user.uts'
+	import { logout, clearToken, isLoggedIn } from '../../src/api/auth.uts'
+	import { ROUTES } from '../../src/constants/route.uts'
+	import { resolveHttpError } from '../../src/core/http.uts'
+	import { openLoginModal, loginModalVisible, loginTarget } from '../../src/core/auth-modal.uts'
+	import { USE_MOCK } from '../../src/core/config.uts'
+	import { bootstrapProfile } from '../../src/core/mock-bootstrap.uts'
+
+	const profile = ref<any>(USE_MOCK ? bootstrapProfile : {})
+	const loading = ref(false)
+	const logoutConfirmVisible = ref(false)
+
+	async function loadProfile() {
+		if (loading.value) return
+		loading.value = true
+		try {
+			const res = await fetchProfile()
+			profile.value =
+				res?.data ?? res?.profile ?? res?.user ?? res ?? {}
+		} catch (e) {
+			uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+
+	onLoad(() => {
+		loadProfile()
+	})
+
+	onShow(() => {
+		if (!isLoggedIn()) {
+			openLoginModal('profile')
+		}
+	})
+
+	onMounted(() => {
+		if (USE_MOCK && !profile.value?.name) loadProfile()
+	})
+
+	function showLogoutConfirm() {
+		logoutConfirmVisible.value = true
+	}
+
+	function hideLogoutConfirm() {
+		logoutConfirmVisible.value = false
+	}
+
+	function doLogout() {
+		logoutConfirmVisible.value = false
+		logout()
+			.then(() => {
+				clearToken()
+				uni.showToast({ title: '已退出登录', icon: 'none' })
+				goToNewsPage()
+			})
+			.catch((e) => {
+				clearToken()
+				uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+				goToNewsPage()
+			})
+	}
+
+	function goToNewsPage() {
+		// #ifdef H5
+		window.location.replace(window.location.pathname + '#' + ROUTES.news)
+		// #endif
+		// #ifndef H5
+		uni.reLaunch({ url: ROUTES.news })
+		// #endif
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import '../../src/styles/common.scss';
+
+	.profile-head {
+		padding: $layout-card-padding;
+		display: flex;
+		align-items: center;
+		margin-bottom: 22rpx;
+	}
+
+	.avatar {
+		width: $avatar-size;
+		height: $avatar-size;
+		border-radius: calc($avatar-size / 2);
+		background: rgba(15, 23, 42, 0.04);
+		flex-shrink: 0;
+	}
+
+	.profile-meta {
+		margin-left: 22rpx;
+		flex: 1;
+	}
+
+	.profile-name {
+		display: block;
+		font-size: $text-page-title-size;
+		font-weight: $text-page-title-weight;
+		color: $uni-color-title;
+	}
+
+	.profile-desc {
+		display: block;
+		margin-top: 10rpx;
+		font-size: $uni-font-size-base;
+		color: $uni-text-color-grey;
+		line-height: 1.5;
+	}
+
+	.info-grid {
+		display: flex;
+		flex-direction: column;
+		gap: $layout-card-gap;
+	}
+
+	.info-item {
+		padding: 18rpx 20rpx;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.info-label {
+		color: $uni-text-color-grey;
+		font-size: $uni-font-size-sm;
+	}
+
+	.info-value {
+		font-size: $uni-font-size-base;
+		font-weight: 600;
+		color: $uni-text-color;
+		text-align: right;
+		max-width: 55%;
+		word-break: break-all;
+	}
+
+	.loading {
+		padding: 30rpx 0;
+		text-align: center;
+		color: $uni-text-color-grey;
+	}
+
+	.logout-wrap {
+		margin-top: $layout-section-gap;
+		padding-top: $layout-section-gap;
+		border-top: 1px solid $uni-border-color;
+	}
+
+	.logout-btn {
+		height: 88rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		color: $uni-color-error;
+		font-size: $uni-font-size-base;
+		border: 1px solid $uni-color-error;
+		border-radius: $uni-border-radius-base;
+	}
+</style>
+

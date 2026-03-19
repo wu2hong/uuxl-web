@@ -1,0 +1,6 @@
+export const STORAGE_KEYS = {
+	token: 'token',
+	chatMessages: 'chat_messages',
+	chatDraft: 'chat_draft',
+} as const
+

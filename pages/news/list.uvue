@@ -1,0 +1,202 @@
+<template>
+	<view class="page-wrap">
+		<PageHeader title="资讯" />
+		<view class="page-content">
+			<view v-if="loading" class="loading-tip">
+				<text class="sub">加载中...</text>
+			</view>
+
+			<scroll-view scroll-y="true" class="list" @scrolltolower="onReachBottom">
+				<view v-if="newsList.length === 0 && !loading" class="empty">
+					<text>暂无数据</text>
+				</view>
+
+				<view
+					v-for="(item, idx) in newsList"
+					:key="item.id ?? idx"
+					class="news-item card"
+				>
+					<image v-if="item.cover" class="news-cover" :src="item.cover" mode="aspectFill"></image>
+					<view class="news-body">
+						<text class="news-title">{{ item.title ?? item.name ?? '未命名资讯' }}</text>
+						<text class="news-summary">{{ item.summary ?? item.desc ?? item.content ?? '' }}</text>
+					</view>
+				</view>
+
+				<view v-if="finished" class="more">
+					<text>没有更多了</text>
+				</view>
+			</scroll-view>
+		</view>
+
+		<BottomNav active="news" />
+		<LoginModal :visible="loginModalVisible" :target="loginTarget" />
+	</view>
+</template>
+
+<script setup lang="uts">
+	import BottomNav from '../../src/components/BottomNav.uvue'
+	import PageHeader from '../../src/components/PageHeader.uvue'
+	import LoginModal from '../../src/components/LoginModal.uvue'
+	import { fetchNewsList } from '../../src/api/news.uts'
+	import { resolveHttpError } from '../../src/core/http.uts'
+	import { loginModalVisible, loginTarget } from '../../src/core/auth-modal.uts'
+	import { USE_MOCK } from '../../src/core/config.uts'
+	import { bootstrapNewsList } from '../../src/core/mock-bootstrap.uts'
+
+	const newsList = ref<any[]>(USE_MOCK ? bootstrapNewsList : [])
+	const page = ref(1)
+	const pageSize = ref(10)
+	const loading = ref(false)
+	const finished = ref(false)
+
+	function extractList(res: any): any[] {
+		return (
+			res?.data?.list ??
+			res?.data?.rows ??
+			res?.list ??
+			res?.items ??
+			[]
+		)
+	}
+
+	async function loadNews(reset: boolean) {
+		if (loading.value) return
+		if (finished.value && !reset) return
+
+		if (reset) {
+			page.value = 1
+			newsList.value = []
+			finished.value = false
+		}
+
+		loading.value = true
+		try {
+			const res = await fetchNewsList({
+				page: page.value,
+				pageSize: pageSize.value,
+			})
+			const list = extractList(res)
+			if (!Array.isArray(list) || list.length === 0) {
+				// Mock 模式兜底，避免页面空白影响联调体验
+				if (USE_MOCK && reset) {
+					newsList.value = bootstrapNewsList
+				}
+				finished.value = true
+				return
+			}
+
+			newsList.value = reset ? list : newsList.value.concat(list)
+
+			if (list.length < pageSize.value) finished.value = true
+			else page.value += 1
+		} catch (e) {
+			uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+		} finally {
+			loading.value = false
+		}
+	}
+
+	function onReachBottom() {
+		loadNews(false)
+	}
+
+	onLoad(() => {
+		loadNews(true)
+	})
+
+	onShow(() => {
+		if (newsList.value.length === 0) loadNews(true)
+	})
+
+	// H5 兜底：某些情况下 onLoad 不触发，确保页面会主动拉取一次
+	onMounted(() => {
+		if (newsList.value.length <= 1) loadNews(true)
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import '../../src/styles/common.scss';
+
+	.page-wrap {
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+	}
+
+	.page-content {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.list {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.loading-tip {
+		padding: 12rpx 0;
+		text-align: center;
+	}
+
+	.sub {
+		color: $text-sub-color;
+		font-size: $uni-font-size-sm;
+	}
+
+	.empty {
+		padding: 60rpx 0;
+		text-align: center;
+		color: $uni-text-color-grey;
+	}
+
+	.news-item {
+		display: flex;
+		flex-direction: row;
+		align-items: flex-start;
+		padding: 18rpx;
+		margin-bottom: 16rpx;
+	}
+
+	.news-cover {
+		width: 160rpx;
+		height: 120rpx;
+		border-radius: $image-cover-radius;
+		margin-right: 18rpx;
+		flex-shrink: 0;
+	}
+
+	.news-body {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.news-title {
+		display: block;
+		font-size: $uni-font-size-lg;
+		font-weight: 700;
+		color: $uni-color-title;
+		margin-bottom: 10rpx;
+	}
+
+	.news-summary {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 4;
+		font-size: $uni-font-size-base;
+		color: $text-sub-color;
+		line-height: 1.5;
+		min-height: 6em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.more {
+		padding: 30rpx 0;
+		text-align: center;
+		color: $uni-text-color-grey;
+	}
+</style>
+

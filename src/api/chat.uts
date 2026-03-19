@@ -1,0 +1,30 @@
+import { endpointOf, CHAT_ROOM_ID, USE_MOCK } from '../core/config.uts'
+import { request, uploadFile } from '../core/http.uts'
+import { mockChatReplyImage, mockChatReplyText } from '../core/mock.uts'
+import type { ApiOk, ChatSendTextResp } from '../types/api.uts'
+
+export function sendChatText(payload: { text: string }): Promise<ApiOk<ChatSendTextResp> | any> {
+	if (USE_MOCK) return mockChatReplyText(payload.text)
+	return request({
+		url: endpointOf('chatSendText'),
+		method: 'POST',
+		data: {
+			roomId: CHAT_ROOM_ID,
+			text: payload.text,
+		},
+	})
+}
+
+export function sendChatImage(filePath: string, payload?: { fileName?: string }): Promise<ApiOk<ChatSendTextResp> | any> {
+	if (USE_MOCK) return mockChatReplyImage()
+	return uploadFile({
+		url: endpointOf('chatSendImage'),
+		filePath,
+		name: 'file',
+		formData: {
+			roomId: CHAT_ROOM_ID,
+			fileName: payload?.fileName ?? '',
+		},
+	})
+}
+

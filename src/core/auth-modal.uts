@@ -1,0 +1,17 @@
+/**
+ * 登录弹窗全局状态：供 BottomNav、首页入口等触发，App 中挂载 LoginModal 响应
+ */
+import { ref } from 'vue'
+
+export const loginModalVisible = ref(false)
+export const loginTarget = ref('')
+
+export function openLoginModal(target: string) {
+	loginTarget.value = target
+	loginModalVisible.value = true
+}
+
+export function closeLoginModal() {
+	loginModalVisible.value = false
+	loginTarget.value = ''
+}

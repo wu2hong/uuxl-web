@@ -1,0 +1,119 @@
+<template>
+	<view class="bottom-nav">
+		<navigator class="nav-link" :url="ROUTES.news" hover-class="none">
+			<view class="nav-item" :class="{ active: active === 'news', disabled: active === 'news' }">
+				<text class="nav-icon">📰</text>
+				<text class="nav-text">资讯</text>
+			</view>
+		</navigator>
+		<view class="nav-link" @click="onNavChat">
+			<view class="nav-item" :class="{ active: active === 'chat', disabled: active === 'chat' }">
+				<text class="nav-icon">💬</text>
+				<text class="nav-text">聊天</text>
+			</view>
+		</view>
+		<view class="nav-link" @click="onNavProfile">
+			<view class="nav-item" :class="{ active: active === 'profile', disabled: active === 'profile' }">
+				<text class="nav-icon">👤</text>
+				<text class="nav-text">个人</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { isLoggedIn } from '../api/auth.uts'
+	import { openLoginModal } from '../core/auth-modal.uts'
+	import { ROUTES } from '../constants/route.uts'
+
+	const props = defineProps({
+		active: { type: String, default: 'news' },
+	})
+	const active = computed(() => props.active)
+
+	function onNavChat() {
+		if (active.value === 'chat') return
+		if (isLoggedIn()) {
+			uni.navigateTo({ url: ROUTES.chat })
+		} else {
+			openLoginModal('chat')
+		}
+	}
+
+	function onNavProfile() {
+		if (active.value === 'profile') return
+		if (isLoggedIn()) {
+			uni.navigateTo({ url: ROUTES.profile })
+		} else {
+			openLoginModal('profile')
+		}
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import '../styles/common.scss';
+
+	.bottom-nav {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: $bottom-nav-height;
+		background: $bottom-nav-bg;
+		border-top: 1px solid $uni-border-color;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		z-index: 10;
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.nav-link {
+		flex: 1;
+		display: flex;
+		height: 100%;
+	}
+
+	.nav-item {
+		flex: 1;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 6rpx;
+		position: relative;
+	}
+
+	.nav-icon {
+		font-size: $bottom-nav-icon-size;
+		line-height: 1;
+	}
+
+	.nav-text {
+		font-size: $bottom-nav-text-size;
+		color: $uni-text-color-grey;
+	}
+
+	.active .nav-text {
+		color: $uni-color-primary;
+		font-weight: 650;
+	}
+
+	.active::after {
+		content: '';
+		position: absolute;
+		left: $bottom-nav-indicator-inset;
+		right: $bottom-nav-indicator-inset;
+		bottom: $bottom-nav-indicator-bottom;
+		height: $bottom-nav-indicator-height;
+		border-radius: 999rpx;
+		background: $color-brand-indicator;
+	}
+
+	.disabled {
+		pointer-events: none;
+	}
+</style>
+

@@ -1,0 +1,185 @@
+<template>
+	<view v-if="visible" class="login-mask" @click="onMaskClick">
+		<view class="login-box" @click.stop>
+			<view class="login-header">
+				<text class="login-title">登录</text>
+				<view class="login-close" @click="onClose">×</view>
+			</view>
+			<view class="login-body">
+				<input
+					class="login-input"
+					v-model="username"
+					placeholder="请输入用户名"
+				/>
+				<input
+					class="login-input"
+					v-model="password"
+					type="password"
+					placeholder="请输入密码"
+				/>
+				<view class="login-btn" :class="{ disabled: loading }" @click="onSubmit">
+					<text>{{ loading ? '登录中...' : '登录' }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { login, setToken } from '../api/auth.uts'
+	import { closeLoginModal } from '../core/auth-modal.uts'
+	import { resolveHttpError } from '../core/http.uts'
+	import { ROUTES } from '../constants/route.uts'
+
+	const props = defineProps({
+		visible: { type: Boolean, default: false },
+		target: { type: String, default: '' },
+	})
+
+	const username = ref('')
+	const password = ref('')
+	const loading = ref(false)
+
+	function onClose() {
+		closeLoginModal()
+	}
+
+	function onMaskClick() {
+		closeLoginModal()
+	}
+
+	function goToTarget() {
+		closeLoginModal()
+		const pages = getCurrentPages()
+		const last = pages[pages.length - 1] as any
+		const route = last?.route ?? ''
+		const needChat = props.target === 'chat' && !route.includes('chat')
+		const needProfile = props.target === 'profile' && !route.includes('profile')
+		if (needChat) {
+			uni.navigateTo({ url: ROUTES.chat })
+		} else if (needProfile) {
+			uni.navigateTo({ url: ROUTES.profile })
+		}
+	}
+
+	function onSubmit() {
+		const u = (username.value ?? '').trim()
+		const p = (password.value ?? '').trim()
+		if (!u || !p) {
+			uni.showToast({ title: '请输入用户名和密码', icon: 'none' })
+			return
+		}
+		if (loading.value) return
+		loading.value = true
+		login(u, p)
+			.then((res) => {
+				const code = res?.code ?? res?.statusCode ?? -1
+				if (code >= 400 || (code !== 0 && code !== 200)) {
+					const msg = res?.message ?? res?.msg ?? '登录失败'
+					uni.showToast({ title: msg, icon: 'none' })
+					return
+				}
+				const token = res?.data?.token ?? res?.token
+				if (token) {
+					setToken(token)
+				}
+				uni.showToast({ title: '登录成功', icon: 'success' })
+				goToTarget()
+			})
+			.catch((e) => {
+				uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+			})
+			.finally(() => {
+				loading.value = false
+			})
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import '../styles/common.scss';
+
+	.login-mask {
+		position: fixed;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 48rpx;
+	}
+
+	.login-box {
+		width: 100%;
+		max-width: 560rpx;
+		background: #fff;
+		border-radius: $uni-border-radius-base;
+		overflow: hidden;
+		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+	}
+
+	.login-header {
+		position: relative;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		padding: 32rpx 24rpx 24rpx;
+		border-bottom: 1px solid $uni-border-color;
+	}
+
+	.login-title {
+		font-size: $text-page-title-size;
+		font-weight: $text-page-title-weight;
+		color: $uni-color-title;
+	}
+
+	.login-close {
+		position: absolute;
+		right: 24rpx;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 56rpx;
+		height: 56rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 40rpx;
+		color: $uni-text-color-grey;
+	}
+
+	.login-body {
+		padding: 32rpx 24rpx;
+	}
+
+	.login-input {
+		width: 100%;
+		height: 88rpx;
+		padding: 0 24rpx;
+		margin-bottom: 24rpx;
+		background: $uni-bg-color-grey;
+		border: 1px solid $uni-border-color;
+		border-radius: $uni-border-radius-base;
+		font-size: $uni-font-size-base;
+		box-sizing: border-box;
+	}
+
+	.login-btn {
+		height: 88rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: $uni-color-primary;
+		color: $text-on-brand;
+		font-size: 32rpx;
+		font-weight: 600;
+		border-radius: $uni-border-radius-base;
+	}
+
+	.login-btn.disabled {
+		opacity: 0.7;
+	}
+</style>

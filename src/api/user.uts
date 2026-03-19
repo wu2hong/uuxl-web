@@ -1,0 +1,14 @@
+import { endpointOf, USE_MOCK } from '../core/config.uts'
+import { request } from '../core/http.uts'
+import { mockProfile } from '../core/mock.uts'
+import type { ApiOk, Profile } from '../types/api.uts'
+
+export function fetchProfile(): Promise<ApiOk<Profile> | any> {
+	if (USE_MOCK) return mockProfile()
+	return request({
+		url: endpointOf('profile'),
+		method: 'GET',
+		data: {},
+	})
+}
+

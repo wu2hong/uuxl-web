@@ -1,0 +1,45 @@
+export type ApiOk<T> = {
+	code?: number
+	data?: T
+	message?: string
+	msg?: string
+}
+
+export type NewsItem = {
+	id?: string
+	title?: string
+	summary?: string
+	cover?: string
+	name?: string
+	desc?: string
+	content?: string
+}
+
+export type NewsListResp = {
+	list?: NewsItem[]
+	rows?: NewsItem[]
+	page?: number
+	pageSize?: number
+	total?: number
+}
+
+export type ChatSendTextResp = {
+	reply?: string
+	text?: string
+	content?: string
+	imageUrl?: string
+	url?: string
+}
+
+export type Profile = {
+	name?: string
+	nickname?: string
+	desc?: string
+	bio?: string
+	phone?: string
+	email?: string
+	region?: string
+	status?: string
+	avatar?: string
+}
+

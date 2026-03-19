@@ -1,0 +1,461 @@
+<template>
+	<view class="page-wrap">
+		<PageHeader title="聊天" />
+		<view class="page-content">
+			<view class="chat-root">
+				<scroll-view scroll-y="true" class="messages" :scroll-into-view="scrollToId">
+					<view
+						v-for="(m, idx) in messages"
+						:key="m.localId ?? idx"
+						:id="m.localId"
+						class="msg-row"
+						:class="{ me: m.role === 'user', assistant: m.role === 'assistant' }"
+					>
+						<view class="bubble" :class="{ sending: m.status === 'sending' }">
+							<text v-if="m.type === 'text'" class="bubble-text">{{ m.content }}</text>
+							<image
+								v-else-if="m.type === 'image'"
+								class="bubble-image"
+								:src="m.imageUrl"
+								mode="aspectFill"
+							></image>
+							<text v-if="m.status === 'sending'" class="bubble-status">发送中...</text>
+						</view>
+					</view>
+
+					<view v-if="messages.length === 0" class="empty">
+						<text>开始聊天吧</text>
+					</view>
+				</scroll-view>
+
+				<view class="composer">
+					<textarea
+						class="composer-input"
+						v-model="composerText"
+						placeholder="输入要发送的内容"
+						maxlength="500"
+					></textarea>
+
+					<view class="composer-actions">
+						<view class="action-btn img-btn" @click="onChooseImage">
+							<text>+ 图片</text>
+						</view>
+						<view
+							class="action-btn send-btn"
+							:class="{ disabled: sending || composerText.trim().length === 0 }"
+							@click="onSendText"
+						>
+							<text>发送</text>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
+
+		<BottomNav active="chat" />
+		<LoginModal :visible="loginModalVisible" :target="loginTarget" />
+	</view>
+</template>
+
+<script setup lang="uts">
+	import BottomNav from '../../src/components/BottomNav.uvue'
+	import PageHeader from '../../src/components/PageHeader.uvue'
+	import LoginModal from '../../src/components/LoginModal.uvue'
+	import { sendChatText, sendChatImage } from '../../src/api/chat.uts'
+	import { isLoggedIn } from '../../src/api/auth.uts'
+	import { openLoginModal, loginModalVisible, loginTarget } from '../../src/core/auth-modal.uts'
+	import { resolveHttpError } from '../../src/core/http.uts'
+	import { USE_MOCK } from '../../src/core/config.uts'
+	import { bootstrapChatMessages } from '../../src/core/mock-bootstrap.uts'
+	import { STORAGE_KEYS } from '../../src/constants/storage.uts'
+	import { loadChatMessages, saveChatMessages, type ChatMessageRecord } from '../../src/core/chat-storage.uts'
+
+	function createBootstrapMessages(): ChatMessageRecord[] {
+		return bootstrapChatMessages.map((x) => ({ ...x, time: Date.now() })) as ChatMessageRecord[]
+	}
+
+	function restoreMessages(): ChatMessageRecord[] {
+		const fallback = USE_MOCK ? createBootstrapMessages() : []
+		return loadChatMessages(fallback)
+	}
+
+	const messages = ref<ChatMessageRecord[]>(restoreMessages())
+	const composerText = ref(String(uni.getStorageSync(STORAGE_KEYS.chatDraft) ?? ''))
+	const sending = ref(false)
+	const scrollToId = ref('')
+
+	function persistMessages() {
+		saveChatMessages(messages.value)
+	}
+
+	function persistDraft() {
+		uni.setStorageSync(STORAGE_KEYS.chatDraft, composerText.value ?? '')
+	}
+
+	function genId(prefix: string) {
+		return prefix + '_' + Date.now() + '_' + Math.floor(Math.random() * 100000)
+	}
+
+	function scrollToBottom(id: string) {
+		// scroll-into-view 触发时机在部分端可能需要下一轮渲染
+		setTimeout(() => {
+			scrollToId.value = id
+		}, 0)
+	}
+
+	function appendMessage(msg: ChatMessageRecord) {
+		messages.value.push(msg)
+		persistMessages()
+	}
+
+	function updateMessageAt(index: number, patch: Partial<ChatMessageRecord>) {
+		const original = messages.value[index]
+		if (!original) return
+		messages.value[index] = { ...original, ...patch }
+		persistMessages()
+	}
+
+	function extractAssistant(res: any): { text?: string; imageUrl?: string } {
+		return {
+			text:
+				res?.data?.reply ??
+				res?.data?.text ??
+				res?.data?.content ??
+				res?.reply ??
+				res?.text ??
+				res?.content,
+			imageUrl:
+				res?.data?.imageUrl ??
+				res?.data?.url ??
+				res?.imageUrl ??
+				res?.url,
+		}
+	}
+
+	async function onSendText() {
+		const text = (composerText.value ?? '').trim()
+		if (!text || sending.value) return
+
+		sending.value = true
+		const userMsgId = genId('u')
+		const userMsg: any = {
+			localId: userMsgId,
+			role: 'user',
+			type: 'text',
+			content: text,
+			status: 'sending',
+			time: Date.now(),
+		}
+
+		appendMessage(userMsg as ChatMessageRecord)
+		const userIdx = messages.value.length - 1
+		scrollToBottom(userMsgId)
+		composerText.value = ''
+		persistDraft()
+
+		try {
+			const res = await sendChatText({ text })
+			updateMessageAt(userIdx, { status: 'sent' })
+
+			const assistant = extractAssistant(res)
+			if (assistant.text) {
+				const assistantId = genId('a')
+				appendMessage({
+					localId: assistantId,
+					role: 'assistant',
+					type: 'text',
+					content: assistant.text,
+					status: 'sent',
+					time: Date.now(),
+				})
+				scrollToBottom(assistantId)
+			} else if (assistant.imageUrl) {
+				const assistantId = genId('a')
+				appendMessage({
+					localId: assistantId,
+					role: 'assistant',
+					type: 'image',
+					imageUrl: assistant.imageUrl,
+					status: 'sent',
+					time: Date.now(),
+				})
+				scrollToBottom(assistantId)
+			}
+		} catch (e) {
+			updateMessageAt(userIdx, { status: 'failed' })
+			uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+		} finally {
+			sending.value = false
+		}
+	}
+
+	function onChooseImage() {
+		uni.chooseImage({
+			count: 1,
+			sizeType: ['compressed'],
+			sourceType: ['album', 'camera'],
+			success: (res) => {
+				const filePath = res.tempFilePaths?.[0]
+				if (!filePath) return
+				sendImage(filePath)
+			},
+		})
+	}
+
+	async function sendImage(filePath: string) {
+		if (sending.value) return
+		sending.value = true
+
+		const userMsgId = genId('u')
+		const userMsg: any = {
+			localId: userMsgId,
+			role: 'user',
+			type: 'image',
+			imageUrl: filePath, // 先展示本地临时路径
+			status: 'sending',
+			time: Date.now(),
+		}
+		appendMessage(userMsg as ChatMessageRecord)
+		const userIdx = messages.value.length - 1
+		scrollToBottom(userMsgId)
+
+		try {
+			const res = await sendChatImage(filePath)
+			updateMessageAt(userIdx, { status: 'sent' })
+
+			const assistant = extractAssistant(res)
+			if (assistant.text) {
+				const assistantId = genId('a')
+				appendMessage({
+					localId: assistantId,
+					role: 'assistant',
+					type: 'text',
+					content: assistant.text,
+					status: 'sent',
+					time: Date.now(),
+				})
+				scrollToBottom(assistantId)
+			}
+
+			if (assistant.imageUrl) {
+				const assistantId = genId('a')
+				appendMessage({
+					localId: assistantId,
+					role: 'assistant',
+					type: 'image',
+					imageUrl: assistant.imageUrl,
+					status: 'sent',
+					time: Date.now(),
+				})
+				scrollToBottom(assistantId)
+			}
+		} catch (e) {
+			updateMessageAt(userIdx, { status: 'failed' })
+			uni.showToast({ title: resolveHttpError(e), icon: 'none' })
+		} finally {
+			sending.value = false
+		}
+	}
+
+	onMounted(() => {
+		if (USE_MOCK && messages.value.length === 0) {
+			messages.value = createBootstrapMessages()
+			persistMessages()
+		}
+		if (messages.value.length > 0) {
+			const lastId = messages.value[messages.value.length - 1].localId
+			if (lastId) scrollToBottom(lastId)
+		}
+	})
+
+	onHide(() => {
+		persistMessages()
+		persistDraft()
+	})
+
+	onUnload(() => {
+		persistMessages()
+		persistDraft()
+	})
+
+	onShow(() => {
+		if (!isLoggedIn()) {
+			openLoginModal('chat')
+			return
+		}
+		composerText.value = String(uni.getStorageSync(STORAGE_KEYS.chatDraft) ?? '')
+		const restored = loadChatMessages([])
+		if (restored.length > 0) {
+			messages.value = restored
+			const lastId = restored[restored.length - 1].localId
+			if (lastId) scrollToBottom(lastId)
+		}
+	})
+
+	watch(
+		() => composerText.value,
+		() => {
+			persistDraft()
+		}
+	)
+</script>
+
+<style lang="scss" scoped>
+	@import '../../src/styles/common.scss';
+
+	.page-wrap {
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.page-content {
+		flex: 1;
+		min-height: 0;
+		padding: 0;
+		overflow: hidden;
+	}
+
+	.chat-root {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.messages {
+		height: 100%;
+		padding: 18rpx 10rpx calc(#{$chat-composer-content-height} + #{$bottom-nav-height} + env(safe-area-inset-bottom));
+		overflow: hidden;
+		box-sizing: border-box;
+	}
+
+	.empty {
+		padding-top: 80rpx;
+		text-align: center;
+		color: $uni-text-color-grey;
+	}
+
+	.msg-row {
+		margin-bottom: 18rpx;
+		display: flex;
+	}
+
+	.msg-row.me {
+		justify-content: flex-end;
+	}
+
+	.msg-row.assistant {
+		justify-content: flex-start;
+	}
+
+	.bubble {
+		max-width: 560rpx;
+		padding: 16rpx 18rpx;
+		background: $uni-bg-color-grey;
+		border: 1px solid $uni-border-color;
+		border-radius: $uni-border-radius-base;
+	}
+
+	.msg-row.me .bubble {
+		background: $color-brand-soft-bg;
+		border-color: $color-brand-soft-border;
+	}
+
+	.bubble.sending {
+		opacity: 0.7;
+	}
+
+	.bubble-text {
+		display: block;
+		font-size: $uni-font-size-base;
+		color: $uni-text-color;
+		line-height: 1.5;
+	}
+
+	.bubble-image {
+		width: 320rpx;
+		height: 220rpx;
+		border-radius: $uni-border-radius-base;
+		display: block;
+	}
+
+	.bubble-status {
+		display: block;
+		margin-top: 10rpx;
+		font-size: $uni-font-size-sm;
+		color: $uni-text-color-grey;
+	}
+
+	.composer {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: calc(#{$bottom-nav-height} + env(safe-area-inset-bottom));
+		background: #fff;
+		border-top: 1px solid $uni-border-color;
+		padding: $chat-composer-padding $chat-composer-padding $chat-composer-gap;
+		min-height: auto;
+		flex-shrink: 0;
+		z-index: 9;
+	}
+
+	.composer-input {
+		background: $uni-bg-color-grey;
+		border: 1px solid $uni-border-color;
+		border-radius: $uni-border-radius-base;
+		padding: $chat-composer-padding;
+		font-size: $uni-font-size-base;
+		width: 100%;
+		box-sizing: border-box;
+		height: $chat-input-height;
+		min-height: $chat-input-height;
+	}
+
+	.composer-actions {
+		margin-top: $chat-composer-gap;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: nowrap;
+		width: 100%;
+	}
+
+	.action-btn {
+		height: $chat-action-btn-height;
+		min-height: $chat-action-btn-height;
+		line-height: $chat-action-btn-height;
+		padding: 0 $chat-action-btn-padding-x;
+		font-size: $chat-action-btn-font-size;
+		border-radius: $chat-action-btn-radius;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		flex-shrink: 0;
+	}
+
+	.img-btn {
+		width: $chat-action-btn-width;
+		color: $uni-color-primary;
+		border: 1px solid $color-brand-outline;
+		border-color: $color-brand-outline;
+		background: $color-brand-light-bg;
+	}
+
+	.send-btn {
+		width: $chat-action-btn-width;
+		margin-left: auto;
+		background: $uni-color-primary;
+		border: 1px solid $uni-color-primary;
+		color: $text-on-brand;
+	}
+
+	.send-btn.disabled {
+		opacity: 0.45;
+	}
+</style>
+

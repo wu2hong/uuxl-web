@@ -1,0 +1,33 @@
+<template>
+	<view class="page-header">
+		<text class="page-header-title">{{ title }}</text>
+	</view>
+</template>
+
+<script setup lang="uts">
+	defineProps({
+		title: { type: String, default: '' },
+	})
+</script>
+
+<style lang="scss" scoped>
+	@import '../styles/common.scss';
+
+	.page-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-top: env(safe-area-inset-top);
+		padding-bottom: 24rpx;
+		padding-left: 24rpx;
+		padding-right: 24rpx;
+		background: $uni-bg-color;
+		border-bottom: 1px solid $uni-border-color;
+	}
+
+	.page-header-title {
+		font-size: $nav-title-size;
+		font-weight: $nav-title-weight;
+		color: $uni-color-title;
+	}
+</style>

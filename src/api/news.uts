@@ -1,0 +1,14 @@
+import { endpointOf, USE_MOCK } from '../core/config.uts'
+import { request } from '../core/http.uts'
+import { mockNewsList } from '../core/mock.uts'
+import type { ApiOk, NewsListResp } from '../types/api.uts'
+
+export function fetchNewsList(params: { page: number; pageSize: number }): Promise<ApiOk<NewsListResp> | any> {
+	if (USE_MOCK) return mockNewsList(params.page, params.pageSize)
+	return request({
+		url: endpointOf('newsList'),
+		method: 'GET',
+		data: params,
+	})
+}
+

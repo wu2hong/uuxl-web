@@ -1,0 +1,33 @@
+// 所有后端接口统一在这里配置，后续只需要改这一处
+
+// 本地调试默认启用 Mock，联调真实后端时改为 false
+export const USE_MOCK = true
+
+// 正式环境请替换为真实 API 域名
+export const BASE_URL = 'https://api.example.com'
+
+export const ENDPOINTS = {
+	// 资讯列表：GET/POST 由后端决定
+	newsList: '/api/news/list',
+
+	// 登录 / 退出
+	login: '/api/auth/login',
+	logout: '/api/auth/logout',
+
+	// 聊天发送文本/图片（后端需要返回“助手/回复”内容）
+	chatSendText: '/api/chat/send-text',
+	chatSendImage: '/api/chat/send-image',
+
+	// 个人信息
+	profile: '/api/user/profile',
+}
+
+// 可选：如果你的后端需要固定会话/房间号，可在这里配置
+export const CHAT_ROOM_ID = ''
+
+export type EndpointKey = keyof typeof ENDPOINTS
+
+export function endpointOf(key: EndpointKey): string {
+	return String(ENDPOINTS[key] ?? '')
+}
+

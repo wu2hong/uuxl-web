@@ -1,0 +1,121 @@
+<template>
+	<view class="page-wrap">
+		<view class="page-content">
+			<view class="hero card">
+				<view class="row-between">
+					<image class="logo" src="/static/logo.png"></image>
+					<view class="hero-text">
+						<text class="hero-title">{{appName}}</text>
+						<text class="hero-sub">H5 + 微信小程序基础版</text>
+					</view>
+				</view>
+			</view>
+
+			<view class="entry-grid">
+				<navigator :url="ROUTES.news" class="entry-card" hover-class="none">
+					<text class="entry-title">资讯列表</text>
+					<text class="entry-desc">调用后端接口仅展示</text>
+				</navigator>
+				<view class="entry-card" @click="onEntryChat">
+					<text class="entry-title">聊天对话</text>
+					<text class="entry-desc">支持文本与图片发送</text>
+				</view>
+				<view class="entry-card" @click="onEntryProfile">
+					<text class="entry-title">个人信息</text>
+					<text class="entry-desc">调用后端接口展示</text>
+				</view>
+			</view>
+		</view>
+
+		<BottomNav active="news" />
+		<LoginModal :visible="loginModalVisible" :target="loginTarget" />
+	</view>
+</template>
+
+<script setup lang="uts">
+	import BottomNav from '../../src/components/BottomNav.uvue'
+	import LoginModal from '../../src/components/LoginModal.uvue'
+	import { isLoggedIn } from '../../src/api/auth.uts'
+	import { openLoginModal } from '../../src/core/auth-modal.uts'
+	import { ROUTES } from '../../src/constants/route.uts'
+	import { loginModalVisible, loginTarget } from '../../src/core/auth-modal.uts'
+
+	const appName = ref('悠悠心理')
+
+	function onEntryChat() {
+		if (isLoggedIn()) {
+			uni.navigateTo({ url: ROUTES.chat })
+		} else {
+			openLoginModal('chat')
+		}
+	}
+
+	function onEntryProfile() {
+		if (isLoggedIn()) {
+			uni.navigateTo({ url: ROUTES.profile })
+		} else {
+			openLoginModal('profile')
+		}
+	}
+</script>
+
+<style lang="scss" scoped>
+	@import '../../src/styles/common.scss';
+
+	.hero {
+		padding: $layout-card-padding;
+		margin-bottom: 24rpx;
+	}
+
+	.logo {
+		width: 110rpx;
+		height: 110rpx;
+		border-radius: $image-cover-radius;
+	}
+
+	.hero-text {
+		margin-left: 22rpx;
+	}
+
+	.hero-title {
+		font-size: $text-page-title-size;
+		font-weight: $text-page-title-weight;
+		color: $uni-color-title;
+		display: block;
+	}
+
+	.hero-sub {
+		margin-top: 10rpx;
+		font-size: $text-sub-size;
+		color: $text-sub-color;
+		display: block;
+	}
+
+	.entry-grid {
+		display: flex;
+		flex-direction: column;
+		gap: $layout-card-gap;
+	}
+
+	.entry-card {
+		padding: $layout-card-padding;
+		border-radius: $uni-border-radius-base;
+		background: $uni-bg-color-grey;
+		border: 1px solid $uni-border-color;
+		cursor: pointer;
+	}
+
+	.entry-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: $uni-color-title;
+		display: block;
+	}
+
+	.entry-desc {
+		margin-top: 12rpx;
+		font-size: $text-sub-size;
+		color: $text-sub-color;
+		display: block;
+	}
+</style>

@@ -1,0 +1,11 @@
+/**
+ * 页面路径常量，避免散落硬编码
+ */
+export const ROUTES = {
+	news: '/pages/news/list',
+	index: '/pages/index/index',
+	chat: '/pages/chat/chat',
+	profile: '/pages/profile/profile',
+} as const
+
+export type RouteKey = keyof typeof ROUTES
